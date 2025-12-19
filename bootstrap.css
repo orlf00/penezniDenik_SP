@@ -12054,6 +12054,14 @@ textarea.form-control-lg {
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
+  #prev,
+  #next,
+  #pageInfo {
+    display: none !important;
+  }
+  #teloTabulky tr {
+    display: table-row !important;
+  }
 
   .web-only{
     display: none !important;

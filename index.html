@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="bootstrap.css">
     <title>Peněžní deník</title>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100" id="prepinac">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <a class="navbar-brand ms-3" href="#">Peněžní deník</a>
         <a class="navbar-brand ms-auto me-3 web-only" href="#">CZK/EUR = <span id="kurzEuroNavbar"></span><br> CZK/USD = <span id="kurzUsdNavbar"></span></a>
@@ -87,18 +87,26 @@
     </div>
 
     <div class="container mx-auto mt-5">
-    <button type="button" class="btn btn-primary web-only" data-bs-toggle="modal" data-bs-target="#formularModal" id="novyZaznam">
-    Nový záznam
-    </button>
-    <p class="print-only">Všechny transakce jsou v uvedeny v Kč.</p>
-    <table class="table table-striped table-bordered mx-auto mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <button type="button" class="btn btn-primary web-only" data-bs-toggle="modal" data-bs-target="#formularModal" id="novyZaznam">
+            + Transakce
+            </button>
+            <p class="print-only">Všechny transakce jsou v uvedeny v Kč.</p>
+            <div class="d-flex gap-2 web-only">
+                <button class="btn btn-outline-success" id="penezniDenikTlacitko">Peněžní deník</button>
+                <button class="btn btn-outline-success" id="pohledavkyZavazkyTlacitko">Pohledávky / Závazky</button>
+                <button class="btn btn-outline-success" id="dlouhodobyMajetekTlacitko">Dlouhodobý majetek</button>
+            </div>
+    </div>
+                            <!--Tabulka záznamů-->
+    <table class="table table-striped table-bordered mx-auto mt-3" id="tabulkaZaznamu">
     <colgroup>
         <col style="width: 10%"> 
         <col style="width: 8%">  
         <col style="width: 12%"> 
         <col style="width: 15%">  
-        <col style="width: 40%">  
         <col style="width: 15%">  
+        <col style="width: 40%">  
     </colgroup>
         <thead>
             <tr>
@@ -116,10 +124,36 @@
             </tr>
         </thead>
         <tbody id="teloTabulky">
-
         </tbody>
     </table>
-    <div class="d-flex justify-content-between align-items-center">
+                            <!--Tabulka pohledávek a závazků-->
+        <table class="table table-striped table-bordered mx-auto mt-3" id="tabulkaPohledavek">
+            <colgroup>
+                <col style="width: 10%"> 
+                <col style="width: 8%">
+                <col style="width: 10%">
+                <col style="width: 12%"> 
+                <col style="width: 15%">  
+                <col style="width: 15%">  
+                <col style="width: 30%">  
+            </colgroup>
+            <thead>
+            <tr>
+                <th scope="col" id="datumHeaderPohledavka">Datum</th>
+                <th scope="col" class="web-only" id="casHeaderPohledavka">Čas</th>
+                <th scope="col" id="datumSplatnostiHeaderPohledavka">Splatnost</th>
+                <th scope="col" id="fakturaHeaderPohledavka" class="mobile-hide">ID faktury</th>
+                <th scope="col" class="web-only" id="castkaHeaderPohledavka">Částka</th>
+                <th scope="col" id="typHeaderPohledavka" class="mobile-hide">Pohledávka / Závazek</th>
+                <th scope="col" id="popisHeaderPohledavka">Popis</th>
+                <th scope="col" class="web-only" id="akceHeaderPohledavka">Akce</th>
+            </tr>
+        </thead>
+        <tbody id="teloTabulkyPohledavek">
+        </tbody>
+        </table>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <button class="btn btn-sm btn-secondary" id="prev">← Předchozí</button>
         <span id="pageInfo"></span>
         <button class="btn btn-sm btn-secondary" id="next">Další →</button>
@@ -156,6 +190,7 @@
                 </tr>
             </tbody>
         </table>
+
     <footer class="d-flex justify-content-between align-items-center py-3 px-4 border-top">
     <span class="text-body-secondary">
         © 2025 Filip Orlický
@@ -174,6 +209,7 @@
         var kurzEur = null;
         var kurzUsd = null;
         let zaznamy = JSON.parse(localStorage.zaznamy || '[]');
+        let posledniStranka = sessionStorage.getItem('posledniStranka') ?? 'transakce';
         const formatter = new Intl.NumberFormat('cs-CZ');
         const zaznamyNaStranku = 5;
         let aktualniStranka = 0;
@@ -194,31 +230,63 @@
             };
 
         };
+        // TODO classa pro pohledavky a zavazky
+        
 
         function zobrazStranku(){
-            const tabulka = $('#teloTabulky tr');
+            let tabulka = $();
+            const penezniDenikTlacitko = $('#penezniDenikTlacitko');
+            const pohledavkyZavazkyTlacitko = $('#pohledavkyZavazkyTlacitko');
+            const dlouhodobyMajetekTlacitko = $('#dlouhodobyMajetekTlacitko');
+
+            if ($('#prepinac').hasClass('transakce')){
+                $('#tabulkaPohledavek').hide();
+                $('#tabulkaZaznamu').show();
+                tabulka = $('#tabulkaZaznamu #teloTabulky tr');
+
+                penezniDenikTlacitko.addClass('active');
+                pohledavkyZavazkyTlacitko.removeClass('active');
+                dlouhodobyMajetekTlacitko.removeClass('active');
+
+            } else if ($('#prepinac').hasClass('pohledavky')){
+                $('#tabulkaZaznamu').hide();
+                $('#tabulkaPohledavek').show();
+                tabulka = $('#tabulkaPohledavek #teloTabulkyPohledavek tr');
+
+                penezniDenikTlacitko.removeClass('active');
+                pohledavkyZavazkyTlacitko.addClass('active');
+                dlouhodobyMajetekTlacitko.removeClass('active');
+
+            } else if ($('#prepinac').hasClass('dlouhodobyMajetek')){
+                tabulka = $('#tabulkaZaznamu #teloTabulky tr');
+                penezniDenikTlacitko.removeClass('active');
+                pohledavkyZavazkyTlacitko.removeClass('active');
+                dlouhodobyMajetekTlacitko.addClass('active');
+            }
+
             const celkemStranek = Math.ceil(tabulka.length / zaznamyNaStranku);
+
+            
+            if (celkemStranek === 0){
+                tabulka.hide();
+                $('#pageInfo').text('Stránka 0 z 0');
+                $('#prev, #next').prop('disabled', true);
+                return;
+            }
+
+            aktualniStranka = Math.max(0, Math.min(aktualniStranka, celkemStranek - 1));
+
             tabulka.hide();
             const start = aktualniStranka * zaznamyNaStranku;
             const end = start + zaznamyNaStranku;
             tabulka.slice(start, end).show();
-            $('#pageInfo').text(`Stránka ${aktualniStranka + 1} z ${celkemStranek}`);
-            if (aktualniStranka === 0){
-                $('#prev').prop('disabled', true);
-            } else {
-                $('#prev').prop('disabled', false);
-            };
-            if (aktualniStranka === celkemStranek - 1){
-                $('#next').prop('disabled', true);
-            } else {
-                $('#next').prop('disabled', false);
-            };
-            if (aktualniStranka > celkemStranek -1){
-                aktualniStranka = celkemStranek -1;
-                zobrazStranku();
-            };
 
-        };
+            $('#pageInfo').text(`Stránka ${aktualniStranka + 1} z ${celkemStranek}`);
+
+            $('#prev').prop('disabled', aktualniStranka === 0);
+            $('#next').prop('disabled', aktualniStranka === celkemStranek - 1);
+        }
+
 
         function ziskejAktualniCas() {
                 const now = new Date();
@@ -433,6 +501,7 @@
         
 
         $(function() {
+        $('#prepinac').addClass(posledniStranka);
         nactiZaznamy();
         zobrazStranku();
 
@@ -583,6 +652,23 @@
             aktualniStranka++;
             zobrazStranku();
         });
+        $('#penezniDenikTlacitko').on('click', function(){
+            $('#prepinac').removeClass('pohledavky dlouhodobyMajetek').addClass('transakce');
+            sessionStorage.posledniStranka = 'transakce';
+            zobrazStranku();
+        });
+        $('#pohledavkyZavazkyTlacitko').on('click', function(){
+            $('#prepinac').removeClass('transakce dlouhodobyMajetek').addClass('pohledavky');
+            sessionStorage.posledniStranka = 'pohledavky';
+            zobrazStranku();
+        });
+        $('#dlouhodobyMajetekTlacitko').on('click', function(){
+            $('#prepinac').removeClass('transakce pohledavky').addClass('dlouhodobyMajetek');
+            sessionStorage.posledniStranka = 'dlouhodobyMajetek';
+            zobrazStranku();
+        });
+
+
 
         ziskejAktualniKurz();
         nactiDanovouSazbu();
